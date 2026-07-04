@@ -35,9 +35,10 @@ export function AlignmentSidebar({ objectiveModel, dimensionStatus, presence }: 
             </div>
             {participantIds.map((id) => {
               const pos = positions[id];
+              const label = presence.participants[id]?.displayName ?? id;
               return (
                 <div key={id} style={{ fontSize: 12, color: '#555' }}>
-                  {id}: {pos ? `${JSON.stringify(pos.value)} (${pos.strength})` : '—'}
+                  {label}: {pos ? `${JSON.stringify(pos.value)} (${pos.strength})` : '—'}
                 </div>
               );
             })}
