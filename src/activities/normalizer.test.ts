@@ -25,4 +25,36 @@ describe('createNormalizer', () => {
     expect(result).toEqual([]);
     expect(called).toBe(false);
   });
+
+  it('converts ISO date strings from the model into epoch ms deterministically, not via model arithmetic', async () => {
+    const json = JSON.stringify([
+      { participantId: 'alice', dimensionId: 'dates', value: { min: '2026-12-20', max: '2026-12-27' }, strength: 'insist' },
+    ]);
+    const { normalize } = createNormalizer(fakeClient(json), DIMENSIONS);
+    const result = await normalize([{ participantId: 'alice', text: 'Dec 20th to Dec 27th' }]);
+    expect(result).toEqual([
+      {
+        scope: 'participant-objective',
+        participantId: 'alice',
+        dimensionId: 'dates',
+        value: { min: Date.UTC(2026, 11, 20), max: Date.UTC(2026, 11, 27) },
+        strength: 'insist',
+      },
+    ]);
+  });
+
+  it('includes today\'s date in the prompt so relative years can be resolved', async () => {
+    let capturedPrompt = '';
+    const client: AnthropicLike = {
+      messages: {
+        create: async (params) => {
+          capturedPrompt = params.messages[0].content;
+          return { content: [{ type: 'text', text: '[]' }] };
+        },
+      },
+    };
+    const { normalize } = createNormalizer(client, DIMENSIONS);
+    await normalize([{ participantId: 'alice', text: 'Dec 20th' }]);
+    expect(capturedPrompt).toContain("Today's date is");
+  });
 });
