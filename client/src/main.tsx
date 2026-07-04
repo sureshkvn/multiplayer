@@ -1,4 +1,4 @@
 import { createRoot } from 'react-dom/client';
-import { JoinScreen } from './JoinScreen.js';
+import { App } from './App.js';
 
-createRoot(document.getElementById('root')!).render(<JoinScreen onJoin={() => {}} />);
+createRoot(document.getElementById('root')!).render(<App />);
