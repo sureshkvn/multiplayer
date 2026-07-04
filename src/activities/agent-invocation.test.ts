@@ -18,8 +18,32 @@ const signals: MessageSignals = {
 describe('createAgentInvoker', () => {
   it('invokes the reactive path and returns the model text', async () => {
     const { invokeReactiveAgent } = createAgentInvoker(fakeClient('Sounds like a great plan!'));
-    const result = await invokeReactiveAgent({ msg, signals, expectedVersion: 0 });
+    const result = await invokeReactiveAgent({ msg, signals, expectedVersion: 0, dimensionStatus: {} });
     expect(result.text).toBe('Sounds like a great plan!');
+  });
+
+  it('includes a readable alignment-status summary in the reactive prompt so the agent can answer state-aware questions', async () => {
+    let capturedPrompt = '';
+    const client: AnthropicLike = {
+      messages: {
+        create: async (params) => {
+          capturedPrompt = params.messages[0].content;
+          return { content: [{ type: 'text', text: 'Yes, aligned!' }] };
+        },
+      },
+    };
+    const { invokeReactiveAgent } = createAgentInvoker(client);
+    await invokeReactiveAgent({
+      msg: { ...msg, text: 'are we aligned on dates?' },
+      signals,
+      expectedVersion: 0,
+      dimensionStatus: {
+        dates: { status: 'aligned', value: { min: Date.UTC(2026, 11, 20), max: Date.UTC(2026, 11, 27) } },
+        airline: { status: 'open', reason: 'insufficient-coverage' },
+      },
+    });
+    expect(capturedPrompt).toContain('dates: aligned on 2026-12-20 to 2026-12-27');
+    expect(capturedPrompt).toContain('airline: not yet decided');
   });
 
   it('reports feasible=true and finalizes when the aligned choice fits the budget', async () => {

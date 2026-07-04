@@ -13,6 +13,23 @@ function badgeColor(status: string): string {
   return '#6b7280';
 }
 
+function formatDate(epochMs: number): string {
+  return new Date(epochMs).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
+function formatPositionValue(dimId: string, value: unknown): string {
+  if (dimId === 'dates') {
+    const { min, max } = value as { min: number; max: number };
+    return `${formatDate(min)} to ${formatDate(max)}`;
+  }
+  if (dimId === 'budget') {
+    const { min, max } = value as { min: number; max: number };
+    return `$${min}-$${max}`;
+  }
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value);
+}
+
 export function AlignmentSidebar({ objectiveModel, dimensionStatus, presence }: {
   objectiveModel: SessionState['objectiveModel'];
   dimensionStatus: SessionState['dimensionStatus'];
@@ -43,7 +60,7 @@ export function AlignmentSidebar({ objectiveModel, dimensionStatus, presence }: 
               const label = presence.participants[id]?.displayName ?? id;
               return (
                 <div key={id} style={{ fontSize: 12, color: '#555' }}>
-                  {label}: {pos ? `${JSON.stringify(pos.value)} (${pos.strength})` : '—'}
+                  {label}: {pos ? `${formatPositionValue(dimId, pos.value)} (${pos.strength})` : '—'}
                 </div>
               );
             })}

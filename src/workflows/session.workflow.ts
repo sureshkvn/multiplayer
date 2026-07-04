@@ -149,7 +149,12 @@ export async function sessionWorkflow(sessionId: string): Promise<void> {
 
     let reactiveInvoked = false;
     if (decision.invokeAgent) {
-      const result = await invokeReactiveAgent({ msg, signals, expectedVersion: registry.getVersion('canonical') });
+      const result = await invokeReactiveAgent({
+        msg,
+        signals,
+        expectedVersion: registry.getVersion('canonical'),
+        dimensionStatus: currentDimensionStatus(),
+      });
       reactiveInvoked = true;
       emit([
         {
