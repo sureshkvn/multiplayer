@@ -1229,7 +1229,13 @@ describe('RuleBasedRoutingPolicy', () => {
   const policy = new RuleBasedRoutingPolicy();
 
   it('invokes the agent when directly addressed', () => {
-    const decision = policy.decide(signals({ addressee: { value: { kind: 'agent' }, confidence: 0.9 } }), ctx);
+    const decision = policy.decide(
+      signals({
+        addressee: { value: { kind: 'agent' }, confidence: 0.9 },
+        actionability: { value: { kind: 'question' }, confidence: 0.9 },
+      }),
+      ctx,
+    );
     expect(decision.invokeAgent).toBe(true);
     expect(decision.reason).toMatch(/^direct-request:/);
   });
