@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { ChatEvent } from './useSession.js';
+import type { ChatEvent, SessionState } from './useSession.js';
 
 function messageText(event: ChatEvent): string | null {
   if (event.type === 'MessagePosted') return (event.payload as { text: string }).text;
@@ -7,12 +7,23 @@ function messageText(event: ChatEvent): string | null {
   return null;
 }
 
-function speakerLabel(event: ChatEvent): string {
+function speakerLabel(event: ChatEvent, participants: SessionState['presence']['participants']): string {
   if (event.actor.kind === 'agent') return 'Agent';
-  return event.actor.participantId ?? 'unknown';
+  const id = event.actor.participantId;
+  if (!id) return 'unknown';
+  return participants[id]?.displayName ?? id;
 }
 
-export function ChatPane({ events, onSend }: { events: ChatEvent[]; participantId: string | null; onSend: (text: string) => void }) {
+export function ChatPane({
+  events,
+  presence,
+  onSend,
+}: {
+  events: ChatEvent[];
+  participantId: string | null;
+  presence: SessionState['presence'];
+  onSend: (text: string) => void;
+}) {
   const [draft, setDraft] = useState('');
   const messages = events.filter((e) => messageText(e) !== null);
 
@@ -29,7 +40,7 @@ export function ChatPane({ events, onSend }: { events: ChatEvent[]; participantI
               background: event.actor.kind === 'agent' ? '#eef2ff' : '#f4f4f5',
             }}
           >
-            <strong>{speakerLabel(event)}: </strong>
+            <strong>{speakerLabel(event, presence.participants)}: </strong>
             {messageText(event)}
           </div>
         ))}

@@ -16,7 +16,7 @@ export function App() {
       <PresenceList presence={state.presence} />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <div style={{ flex: 1 }}>
-          <ChatPane events={state.events} participantId={participantId} onSend={sendMessage} />
+          <ChatPane events={state.events} participantId={participantId} presence={state.presence} onSend={sendMessage} />
         </div>
         <AlignmentSidebar objectiveModel={state.objectiveModel} dimensionStatus={state.dimensionStatus} presence={state.presence} />
       </div>
