@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { TestWorkflowEnvironment } from '@temporalio/testing';
 import { Worker } from '@temporalio/worker';
 import { fileURLToPath } from 'node:url';
