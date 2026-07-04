@@ -1,8 +1,9 @@
 import type { IncomingMessage } from '../core/events/types.js';
 import type { ClassifierOutput, MessageSignals, ObservationPayload, RawObservation } from '../core/classification/types.js';
+import type { TranscriptEntry } from './classifier.js';
 
 export interface ClassifierLike {
-  classify(msg: IncomingMessage): Promise<ClassifierOutput>;
+  classify(msg: IncomingMessage, history?: TranscriptEntry[]): Promise<ClassifierOutput>;
 }
 
 export interface NormalizerLike {
@@ -10,8 +11,8 @@ export interface NormalizerLike {
 }
 
 export function createClassifierPipeline(classifier: ClassifierLike, normalizer: NormalizerLike) {
-  async function run(msg: IncomingMessage): Promise<MessageSignals> {
-    const c = await classifier.classify(msg);
+  async function run(msg: IncomingMessage, history: TranscriptEntry[] = []): Promise<MessageSignals> {
+    const c = await classifier.classify(msg, history);
     const observations = await normalizer.normalize(c.observations.value);
     return {
       addressee: c.addressee,

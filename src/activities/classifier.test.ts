@@ -35,4 +35,34 @@ describe('createClassifier', () => {
     const { classify } = createClassifier(fakeClient('no json here'));
     await expect(classify(msg)).rejects.toThrow();
   });
+
+  it('includes the recent conversation history in the prompt so affirmations can be attributed', async () => {
+    let capturedPrompt = '';
+    const client: AnthropicLike = {
+      messages: {
+        create: async (params) => {
+          capturedPrompt = params.messages[0].content;
+          return {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify({
+                  addressee: { kind: 'group', confidence: 0.9 },
+                  actionability: { kind: 'deliberation', confidence: 0.9 },
+                  observations: [{ participantId: 'bob', text: 'Dec 20-27' }],
+                }),
+              },
+            ],
+          };
+        },
+      },
+    };
+    const { classify } = createClassifier(client);
+    const bobMsg: IncomingMessage = { ...msg, speakerId: 'bob', text: 'works for me' };
+    const result = await classify(bobMsg, [{ speaker: 'alice', text: 'Dec 20th to Dec 27th works for me' }]);
+
+    expect(capturedPrompt).toContain('alice: Dec 20th to Dec 27th works for me');
+    expect(capturedPrompt).toContain('Current speaker: bob');
+    expect(result.observations.value).toEqual([{ participantId: 'bob', text: 'Dec 20-27' }]);
+  });
 });
