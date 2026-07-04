@@ -10,7 +10,13 @@ export class RuleBasedRoutingPolicy implements RoutingPolicy {
   ) {}
 
   decide(signals: MessageSignals, ctx: SessionContext): RouteDecision {
-    const applyObservations = signals.actionability.value.kind !== 'social';
+    // Gating on actionability.kind !== 'social' discarded real observations:
+    // a short, casually-toned affirmation ("me too, works fine") can still
+    // carry a legitimate stated position, and the classifier already
+    // extracted it into `observations` if so. The tone label shouldn't
+    // override data that's already there — an empty observations array
+    // naturally yields applyObservations=false regardless.
+    const applyObservations = signals.observations.value.length > 0;
 
     for (const rule of this.rules) {
       const verdict = rule.test(signals, this.cfg, ctx);

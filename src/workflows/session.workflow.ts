@@ -60,6 +60,22 @@ function serializePresence(presence: PresenceState): SerializedPresenceState {
   };
 }
 
+const HISTORY_WINDOW = 12;
+
+// The classifier needs recent context to attribute affirmations ("great",
+// "works for me") to the proposal they're agreeing with — without it, every
+// message is classified in isolation and agreements produce no observation
+// at all, which stalls "insufficient-coverage" forever.
+function buildTranscript(events: SessionEvent[]): { speaker: string; text: string }[] {
+  return events
+    .filter((e) => e.type === 'MessagePosted' || e.type === 'AgentMessagePosted')
+    .slice(-HISTORY_WINDOW)
+    .map((e) => ({
+      speaker: e.type === 'AgentMessagePosted' ? 'Agent' : e.actor.kind === 'human' ? e.actor.participantId : 'unknown',
+      text: (e.payload as { text: string }).text,
+    }));
+}
+
 export const getStateQuery = defineQuery<SessionState>('getState');
 
 export async function sessionWorkflow(sessionId: string): Promise<void> {
@@ -105,7 +121,7 @@ export async function sessionWorkflow(sessionId: string): Promise<void> {
   }));
 
   setHandler(submitMessageSignal, async (msg: IncomingMessage) => {
-    const classifierOutput = await classify(msg);
+    const classifierOutput = await classify(msg, buildTranscript(events));
     const observations = await normalize(classifierOutput.observations.value);
     const signals = {
       addressee: classifierOutput.addressee,
