@@ -10,7 +10,7 @@ import { canonicalProjection, type CanonicalState } from '../core/projections/ca
 import { presenceProjection, presentParticipantIds, type PresenceState } from '../core/projections/presence.js';
 import { AlignmentDetectorImpl } from '../core/facilitation/detector.js';
 import { RuleBasedFacilitationGate, facilitationKey } from '../core/facilitation/gate.js';
-import type { Reconciliation } from '../core/comparators/types.js';
+import type { Position, Reconciliation } from '../core/comparators/types.js';
 import { DIMENSIONS } from '../domain/japan-trip.js';
 
 const { classify, normalize, invokeReactiveAgent, invokeProactiveAgent, broadcastEvents } = proxyActivities<typeof activities>({
@@ -21,12 +21,43 @@ export const submitMessageSignal = defineSignal<[IncomingMessage]>('submitMessag
 export const joinSignal = defineSignal<[{ participantId: string; displayName: string }]>('join');
 export const leaveSignal = defineSignal<[{ participantId: string }]>('leave');
 
+// Wire-safe shapes: JSON.stringify (used both by Temporal's default payload
+// converter and by the gateway forwarding this over WebSocket) silently drops
+// Map contents, so the query handler must serialize Maps to plain objects
+// before returning — never hand raw ObjectiveModelState/PresenceState across
+// this boundary.
+export interface SerializedObjectiveModelState {
+  dimensions: Record<string, Record<string, Position>>;
+  ratified: Record<string, { value: unknown; seq: number }>;
+  lastObservationSeq: number;
+}
+
+export interface SerializedPresenceState {
+  participants: Record<string, { displayName: string; connected: boolean; joinedAt: number }>;
+  lastSeq: number;
+}
+
 export interface SessionState {
   events: SessionEvent[];
-  objectiveModel: ObjectiveModelState;
+  objectiveModel: SerializedObjectiveModelState;
   canonical: CanonicalState;
-  presence: PresenceState;
+  presence: SerializedPresenceState;
   dimensionStatus: Record<string, Reconciliation>;
+}
+
+function serializeObjectiveModel(model: ObjectiveModelState): SerializedObjectiveModelState {
+  return {
+    dimensions: Object.fromEntries([...model.dimensions.entries()].map(([dimId, posMap]) => [dimId, Object.fromEntries(posMap)])),
+    ratified: Object.fromEntries(model.ratified),
+    lastObservationSeq: model.lastObservationSeq,
+  };
+}
+
+function serializePresence(presence: PresenceState): SerializedPresenceState {
+  return {
+    participants: Object.fromEntries(presence.participants),
+    lastSeq: presence.lastSeq,
+  };
 }
 
 export const getStateQuery = defineQuery<SessionState>('getState');
@@ -67,9 +98,9 @@ export async function sessionWorkflow(sessionId: string): Promise<void> {
 
   setHandler(getStateQuery, () => ({
     events,
-    objectiveModel: registry.get<ObjectiveModelState>('objective-model'),
+    objectiveModel: serializeObjectiveModel(registry.get<ObjectiveModelState>('objective-model')),
     canonical: registry.get<CanonicalState>('canonical'),
-    presence: registry.get<PresenceState>('presence'),
+    presence: serializePresence(registry.get<PresenceState>('presence')),
     dimensionStatus: currentDimensionStatus(),
   }));
 
