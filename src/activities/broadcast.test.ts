@@ -38,4 +38,15 @@ describe('broadcast registry', () => {
   it('is a no-op for a session with no registered sockets', async () => {
     await expect(broadcastEvents('unknown-session', [event])).resolves.toBeUndefined();
   });
+
+  it('includes the snapshot in the payload when provided', async () => {
+    const socket = fakeSocket();
+    registerSocket('s3', socket as any);
+    await broadcastEvents('s3', [event], { dimensionStatus: { airline: { status: 'aligned', value: 'ANA' } } });
+    expect(JSON.parse(socket.sent[0])).toEqual({
+      type: 'events',
+      events: [event],
+      snapshot: { dimensionStatus: { airline: { status: 'aligned', value: 'ANA' } } },
+    });
+  });
 });

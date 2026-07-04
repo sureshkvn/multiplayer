@@ -37,7 +37,16 @@ export function useSession() {
         setParticipantId(msg.participantId);
         setState(normalizeState(msg.state));
       } else if (msg.type === 'events') {
-        setState((prev) => (prev ? { ...prev, events: [...prev.events, ...msg.events] } : prev));
+        setState((prev) => {
+          if (!prev) return prev;
+          const next: SessionState = { ...prev, events: [...prev.events, ...msg.events] };
+          if (msg.snapshot) {
+            if (msg.snapshot.objectiveModel) next.objectiveModel = msg.snapshot.objectiveModel;
+            if (msg.snapshot.presence) next.presence = msg.snapshot.presence;
+            if (msg.snapshot.dimensionStatus) next.dimensionStatus = msg.snapshot.dimensionStatus;
+          }
+          return next;
+        });
       }
     };
 

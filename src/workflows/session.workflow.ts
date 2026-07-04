@@ -94,7 +94,17 @@ export async function sessionWorkflow(sessionId: string): Promise<void> {
       events.push(e);
       registry.apply(e);
     }
-    if (newEvents.length > 0) void broadcastEvents(sessionId, newEvents);
+    if (newEvents.length > 0) {
+      // Clients only get incremental `events`, never a full re-hydrate — so
+      // the derived projections (objectiveModel, presence, dimensionStatus)
+      // must ride along on every broadcast, or a client's alignment sidebar
+      // would freeze at whatever it looked like when that client first joined.
+      void broadcastEvents(sessionId, newEvents, {
+        objectiveModel: serializeObjectiveModel(registry.get<ObjectiveModelState>('objective-model')),
+        presence: serializePresence(registry.get<PresenceState>('presence')),
+        dimensionStatus: currentDimensionStatus(),
+      });
+    }
   }
 
   function currentDimensionStatus(): Record<string, Reconciliation> {

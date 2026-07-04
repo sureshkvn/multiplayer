@@ -19,7 +19,12 @@ export function AlignmentSidebar({ objectiveModel, dimensionStatus, presence }: 
   presence: SessionState['presence'];
 }) {
   const model = objectiveModel as { dimensions: Record<string, Record<string, { value: unknown; strength: string }>> };
-  const participantIds = Object.keys(presence.participants);
+  // Only currently-connected participants count toward requireAllEngaged
+  // coverage — listing everyone who's ever joined (including stale test
+  // observers) made the "who's blocking alignment" list actively misleading.
+  const participantIds = Object.entries(presence.participants)
+    .filter(([, p]) => p.connected)
+    .map(([id]) => id);
 
   return (
     <div style={{ padding: 12, borderLeft: '1px solid #ddd', width: 280 }}>

@@ -20,10 +20,14 @@ export function registerSocket(sessionId: string, socket: WsLike): void {
   socket.on('close', () => set.delete(socket));
 }
 
-export async function broadcastEvents(sessionId: string, events: SessionEvent[]): Promise<void> {
+// `snapshot` carries the freshly-recomputed derived state (objectiveModel,
+// presence, dimensionStatus) alongside the incremental events. Without it,
+// clients only ever see these fields as they were at their initial hydrate —
+// the alignment sidebar would silently freeze after the first message.
+export async function broadcastEvents(sessionId: string, events: SessionEvent[], snapshot?: Record<string, unknown>): Promise<void> {
   const set = sessionSockets.get(sessionId);
   if (!set) return;
-  const payload = JSON.stringify({ type: 'events', events });
+  const payload = JSON.stringify({ type: 'events', events, snapshot });
   for (const socket of set) {
     if (socket.readyState === WS_OPEN) socket.send(payload);
   }
